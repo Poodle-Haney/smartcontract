@@ -45,16 +45,18 @@ contract Presale is
     uint256 public stagePurcharsedToken;
 
     mapping(string => UserDeposit[]) userDeposits;
+    mapping(uint256 => uint256) stageStepTokens;
 
     event BuyToken(
         string indexed username,
         address indexed depositAddress,
-        string indexed transactionId,
-        DepositCurrency currency,
+        string usernameStr,
+        string transactionId,
         uint256 stage,
         uint256 stagePrice,
         uint256 purchaseTokenAmount,
         uint256 currencyPrice,
+        DepositCurrency currency,
         uint256 timestamp
     );
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -109,7 +111,7 @@ contract Presale is
         uint256 purchaseUSD = purchaseData.tokenAmount * stagePrice;
         (, bytes memory data) = usdt.staticcall(
             abi.encodeWithSignature(
-                "allowance(address, address)",
+                "allowance(address,address)",
                 _msgSender(),
                 address(this)
             )
@@ -139,12 +141,13 @@ contract Presale is
         emit BuyToken(
             purchaseData.username,
             _msgSender(),
+            purchaseData.username,
             purchaseData.transactionId,
-            DepositCurrency.USDT,
             currentStep,
             stagePrice,
             purchaseData.tokenAmount,
             1,
+            DepositCurrency.USDT,
             block.timestamp
         );
         return true;
@@ -178,14 +181,41 @@ contract Presale is
         emit BuyToken(
             purchaseData.username,
             _msgSender(),
+            purchaseData.username,
             purchaseData.transactionId,
-            DepositCurrency.COIN,
             currentStep,
             stagePrice,
             purchaseData.tokenAmount,
             coinPrice,
+            DepositCurrency.COIN,
             block.timestamp
         );
+        return true;
+    }
+
+    function updateOracle(address newOracle) public onlyOwner returns(bool) {
+        require(oracle != newOracle, "Presale: Same address");
+        oracle = newOracle;
+        return true;
+    }
+
+    function updateWithdrawAddress(address newAddress) public onlyOwner returns(bool) {
+        require(withdrawAddress != newAddress, "Presale: Same address");
+        withdrawAddress = newAddress;
+        return true;
+    }
+
+    function resetStage(uint256 step, uint256 startTime) public onlyOwner returns(bool) {
+        (bool success, ) = oracle.call(
+            abi.encodeWithSignature(
+                "updateStage(uint256,uint256)",
+                step,
+                startTime
+            )
+        );
+        require(success, "Presale: Reset is failed");
+        stageStepTokens[step-1] = stagePurcharsedToken;
+        stagePurcharsedToken = 0;
         return true;
     }
 
@@ -195,7 +225,7 @@ contract Presale is
     ) public onlyOwner returns (bool) {
         (bool success, ) = tokenAddress.call(
             abi.encodeWithSignature(
-                "transfer(address, uint256)",
+                "transfer(address,uint256)",
                 _msgSender(),
                 tokenAmount
             )
@@ -210,7 +240,7 @@ contract Presale is
         return true;
     }
 
-    function getCurrentStage() public view returns (uint256, uint256, uint256) {
+    function getCurrentStage() internal view returns (uint256, uint256, uint256) {
         (, bytes memory stepdata) = oracle.staticcall(
             abi.encodeWithSignature("getCurrentStage()")
         );

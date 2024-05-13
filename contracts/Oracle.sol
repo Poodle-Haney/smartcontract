@@ -17,13 +17,14 @@ contract Oracle is
         uint256 price;
         uint256 limitTokenAmount;
         uint256 minDealUSD;
-        uint256 startTime;
-        uint256 endTime;
     }
 
     bytes32 public CHANGE_STAGE_ROLE;
 
     uint256 currentStage;
+    uint256 stageDuration;
+    uint256 stageStepDuration;
+    uint256 stageStartTime;
     mapping(uint256 => StageInfo) stages;
 
     event AddStage(uint256 indexed step, StageInfo info);
@@ -36,9 +37,9 @@ contract Oracle is
     function initialize(address initialOwner) public initializer {
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
-        currentStage = 1;
         CHANGE_STAGE_ROLE = keccak256("CHANGE_STAGE_ROLE");
         _grantRole(CHANGE_STAGE_ROLE, _msgSender());
+        stageStepDuration = 30 minutes;
     }
 
     function addStages(
@@ -62,6 +63,12 @@ contract Oracle is
         stages[step] = stageInfo;
     }
 
+    function startStage(uint256 startTime) public onlyOwner returns(uint256) {
+        currentStage = 1;
+        stageStartTime = startTime;
+        return stageStartTime;
+    }
+
     function removeStages(uint256[] memory steps) public onlyOwner {
         for (uint8 i; i < steps.length; i++) {
             delete stages[steps[i]];
@@ -72,13 +79,23 @@ contract Oracle is
         _grantRole(CHANGE_STAGE_ROLE, newRole);
     }
 
-    function updateStage(uint256 step) public {
+    function updateStage(uint256 step, uint256 startTime) public {
         require(
             hasRole(CHANGE_STAGE_ROLE, _msgSender()),
             "Oracle: Must be CHANGE_STAGE_ROLE role"
         );
         require(step > currentStage, "Oracle: Already activated");
         currentStage = step;
+        stageStartTime = startTime;
+    }
+
+    function updateStageDuration(uint256 duration) public returns(bool) {
+        require(
+            hasRole(CHANGE_STAGE_ROLE, _msgSender()),
+            "Oracle: Must be CHANGE_STAGE_ROLE role"
+        );
+        stageStepDuration = duration;
+        return true;
     }
 
     function getCurrentStage() public view returns (uint256) {
@@ -89,8 +106,16 @@ contract Oracle is
         uint256 step
     ) public view returns (uint256 stagePrice, uint256 limitTokenAmount) {
         StageInfo memory stage = stages[step];
-        stagePrice = stage.price;
+        (stagePrice, ) = calculatePrice();
         limitTokenAmount = stage.limitTokenAmount;
+    }
+
+    function getCurrentStageInfo() public view returns(uint256 stageStep, uint256 price, uint256 limitTokenAmount, uint256 minDealUSD, uint256 endTime) {
+        stageStep = currentStage;
+        StageInfo memory info = stages[currentStage];
+        (price, endTime) = calculatePrice();
+        limitTokenAmount = info.limitTokenAmount;
+        minDealUSD = info.minDealUSD;
     }
 
     function getCoinPrice(address feed) public view returns (int256) {
@@ -102,6 +127,20 @@ contract Oracle is
             (uint80, int256, uint256, uint256, uint80)
         );
         return price;
+    }
+
+    function calculatePrice() internal view returns(uint256, uint256) {
+        uint256 stageStep = (block.timestamp - stageStartTime) / stageStepDuration;
+        StageInfo memory currentStageInfo = stages[currentStage];
+        StageInfo memory nextStage = stages[currentStage+1];
+        uint256 stepPrice = currentStageInfo.price;
+        if(nextStage.price - currentStageInfo.price == 20) {
+            stepPrice = currentStageInfo.price + 2 * stageStep >= nextStage.price ? nextStage.price - 2 : currentStageInfo.price + 2 * stageStep;
+        } else {
+            stepPrice = currentStageInfo.price + stageStep >= nextStage.price ? nextStage.price - 2 : currentStageInfo.price + stageStep;
+        }
+        uint256 endTime = stageStartTime + (stageStep + 1) * stageStepDuration;
+        return (stepPrice, endTime);
     }
 
     function _authorizeUpgrade(
