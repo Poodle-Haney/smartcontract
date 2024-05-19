@@ -19,7 +19,12 @@ contract Presale is
     enum DepositCurrency {
         COIN,
         USDT,
+        USDC,
         CARD
+    }
+    enum TokenType {
+        USDT,
+        USDC
     }
     struct UserDeposit {
         address depositAddresse;
@@ -37,10 +42,11 @@ contract Presale is
 
     address oracle;
     address usdt;
+    address usdc;
     address withdrawAddress;
     address oraclePriceFeed;
 
-    uint256 MAX_PRESALE;
+    uint256 public MAX_PRESALE;
     uint256 public totalPurcharsedToken;
     uint256 public stagePurcharsedToken;
 
@@ -59,21 +65,24 @@ contract Presale is
         DepositCurrency currency,
         uint256 timestamp
     );
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    event UpdateOracle(address prevOracle, address newOracle);
+    event UpdateTokenAddress(TokenType tokenType, address prevTokenAddress, address newTokenAddress);
+    event UpdateWithdrawAddress(address prevWithdrawAddress, address newWithdrawAddress);
+    event ResetStage(uint256 prevStepDealAmount, uint256 step, uint256 startTime);
+    event Withdraw(address tokenAddress, uint256 amount, address to);
 
     function initialize(
         address initialOwner,
         address _oracle,
         address _usdt,
+        address _usdc,
         address _oraclePriceFeed
     ) public initializer {
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         oracle = _oracle;
         usdt = _usdt;
+        usdc = _usdc;
         withdrawAddress = initialOwner;
         oraclePriceFeed = _oraclePriceFeed;
         MAX_PRESALE = 4 * 10 ** 10 * 10 ** 18;
@@ -96,7 +105,8 @@ contract Presale is
     /**
      * @dev To buy token with USDT
      */
-    function buyWithUSDT(
+    function buyWithToken(
+        TokenType tokenType,
         PurchaseData memory purchaseData
     ) public whenNotPaused nonReentrant returns (bool) {
         (
@@ -109,7 +119,8 @@ contract Presale is
             "Presale: Wait next stage"
         );
         uint256 purchaseUSD = purchaseData.tokenAmount * stagePrice;
-        (, bytes memory data) = usdt.staticcall(
+        address tokenAddress = tokenType == TokenType.USDT ? usdt : usdc;
+        (, bytes memory data) = tokenAddress.staticcall(
             abi.encodeWithSignature(
                 "allowance(address,address)",
                 _msgSender(),
@@ -121,7 +132,7 @@ contract Presale is
             purchaseUSD <= allowance,
             "Presale: Make sure to add enough allowance"
         );
-        (bool success, ) = usdt.call(
+        (bool success, ) = tokenAddress.call(
             abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)",
                 _msgSender(),
@@ -136,7 +147,7 @@ contract Presale is
             purchaseData.username,
             currentStep,
             1,
-            DepositCurrency.USDT
+            tokenType == TokenType.USDT ? DepositCurrency.USDT : DepositCurrency.USDC
         );
         emit BuyToken(
             purchaseData.username,
@@ -169,7 +180,7 @@ contract Presale is
 
         (uint256 ethAmount, uint256 coinPrice) = buyEthAmount(purchaseUSD);
         require(msg.value >= ethAmount, "Presale: Less ETH amount");
-        sendValue(payable(owner()), ethAmount);
+        sendValue(payable(withdrawAddress), ethAmount);
         update(
             purchaseUSD,
             purchaseData.tokenAmount,
@@ -195,13 +206,30 @@ contract Presale is
 
     function updateOracle(address newOracle) public onlyOwner returns(bool) {
         require(oracle != newOracle, "Presale: Same address");
+        address prevOracle = oracle;
         oracle = newOracle;
+        emit UpdateOracle(prevOracle, newOracle);
+        return true;
+    }
+
+    function updateTokenAddress(TokenType tokenType, address newAddress) public onlyOwner returns(bool) {
+        require(usdt != newAddress && usdc != newAddress, "Presale: Same address");
+        address prevAddress = tokenType == TokenType.USDT ? usdt : usdc;
+        if(tokenType == TokenType.USDT) {
+            usdt = newAddress;
+        } else {
+            usdc = newAddress;
+        }
+
+        emit UpdateTokenAddress(tokenType, prevAddress, newAddress);
         return true;
     }
 
     function updateWithdrawAddress(address newAddress) public onlyOwner returns(bool) {
         require(withdrawAddress != newAddress, "Presale: Same address");
+        address prevWithdrawAddress = withdrawAddress;
         withdrawAddress = newAddress;
+        emit UpdateWithdrawAddress(prevWithdrawAddress, newAddress);
         return true;
     }
 
@@ -215,7 +243,10 @@ contract Presale is
         );
         require(success, "Presale: Reset is failed");
         stageStepTokens[step-1] = stagePurcharsedToken;
+        uint256 prevStageDealAmount = stagePurcharsedToken;
         stagePurcharsedToken = 0;
+
+        emit ResetStage(prevStageDealAmount, step, startTime);
         return true;
     }
 
@@ -226,17 +257,21 @@ contract Presale is
         (bool success, ) = tokenAddress.call(
             abi.encodeWithSignature(
                 "transfer(address,uint256)",
-                _msgSender(),
+                withdrawAddress,
                 tokenAmount
             )
         );
         require(success, "Presale: Withdraw is failed");
+        
+        emit Withdraw(tokenAddress, tokenAmount, withdrawAddress);
         return true;
     }
 
     function withdrawEth() public onlyOwner returns (bool) {
-        (bool success, ) = owner().call{value: address(this).balance}("");
+        (bool success, ) = withdrawAddress.call{value: address(this).balance}("");
         require(success, "Presale: Withdraw is failed");
+
+        emit Withdraw(address(0), address(this).balance, withdrawAddress);
         return true;
     }
 

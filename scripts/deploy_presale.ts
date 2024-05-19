@@ -14,7 +14,7 @@ async function main() {
     // ],
     // ** BSC
     [
-      '0x4D084c9C2faA4aB089628d45D2c86F0C205d6Eb7',
+      deployer.address,
       '0x38daAcdcc9C328615aAc177957289B47de36f2d6',
       '0x987cA07Bc836f5b952cdCcE05A5084e55206637C',
       '0x2514895c72f50D8bd4B4F9b1110F0D6bD2c97526',

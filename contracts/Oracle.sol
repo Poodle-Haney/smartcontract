@@ -21,6 +21,7 @@ contract Oracle is
 
     bytes32 public CHANGE_STAGE_ROLE;
 
+    uint256 public priceDecimal;
     uint256 currentStage;
     uint256 stageDuration;
     uint256 stageStepDuration;
@@ -29,10 +30,8 @@ contract Oracle is
 
     event AddStage(uint256 indexed step, StageInfo info);
     event Remove(uint256 indexed step);
-
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    event StartStage(uint256 stage, uint256 startTime);
+    event ChangeStageStepDuration(uint256 prevDuration, uint256 nowDuration);
 
     function initialize(address initialOwner) public initializer {
         __Ownable_init(initialOwner);
@@ -40,6 +39,7 @@ contract Oracle is
         CHANGE_STAGE_ROLE = keccak256("CHANGE_STAGE_ROLE");
         _grantRole(CHANGE_STAGE_ROLE, _msgSender());
         stageStepDuration = 30 minutes;
+        priceDecimal = 6;
     }
 
     function addStages(
@@ -52,6 +52,7 @@ contract Oracle is
         );
         for (uint8 i = 0; i < steps.length; i++) {
             stages[steps[i]] = stageInfos[i];
+            emit AddStage(steps[i], stageInfos[i]);
         }
     }
 
@@ -61,9 +62,11 @@ contract Oracle is
     ) public onlyOwner {
         // require(!stages[step], "Oracle: Duplicated stage");
         stages[step] = stageInfo;
+        emit AddStage(step, stageInfo);
     }
 
     function startStage(uint256 startTime) public onlyOwner returns(uint256) {
+        require(currentStage == 0, "Oracle: Alrady started stage");
         currentStage = 1;
         stageStartTime = startTime;
         return stageStartTime;
@@ -72,6 +75,7 @@ contract Oracle is
     function removeStages(uint256[] memory steps) public onlyOwner {
         for (uint8 i; i < steps.length; i++) {
             delete stages[steps[i]];
+            emit Remove(steps[i]);
         }
     }
 
@@ -87,6 +91,7 @@ contract Oracle is
         require(step > currentStage, "Oracle: Already activated");
         currentStage = step;
         stageStartTime = startTime;
+        emit StartStage(step, startTime);
     }
 
     function updateStageDuration(uint256 duration) public returns(bool) {
@@ -94,7 +99,10 @@ contract Oracle is
             hasRole(CHANGE_STAGE_ROLE, _msgSender()),
             "Oracle: Must be CHANGE_STAGE_ROLE role"
         );
+        uint256 prevDuration = stageStepDuration;
         stageStepDuration = duration;
+
+        emit ChangeStageStepDuration(prevDuration, duration);
         return true;
     }
 
@@ -130,7 +138,7 @@ contract Oracle is
     }
 
     function calculatePrice() internal view returns(uint256, uint256) {
-        uint256 stageStep = (block.timestamp - stageStartTime) / stageStepDuration;
+        uint256 stageStep = block.timestamp <= stageStartTime ? 0 : (block.timestamp - stageStartTime) / stageStepDuration;
         StageInfo memory currentStageInfo = stages[currentStage];
         StageInfo memory nextStage = stages[currentStage+1];
         uint256 stepPrice = currentStageInfo.price;
