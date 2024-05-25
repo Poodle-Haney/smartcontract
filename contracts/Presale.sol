@@ -106,7 +106,7 @@ contract Presale is
      * @dev To buy token with USDT
      */
     function buyWithToken(
-        TokenType tokenType,
+        DepositCurrency tokenType,
         PurchaseData memory purchaseData
     ) public whenNotPaused nonReentrant returns (bool) {
         (
@@ -114,12 +114,13 @@ contract Presale is
             uint256 stagePrice,
             uint256 limiTokenAmount
         ) = getCurrentStage();
+
         require(
             stagePurcharsedToken + purchaseData.tokenAmount <= limiTokenAmount,
             "Presale: Wait next stage"
         );
         uint256 purchaseUSD = purchaseData.tokenAmount * stagePrice;
-        address tokenAddress = tokenType == TokenType.USDT ? usdt : usdc;
+        address tokenAddress = tokenType == DepositCurrency.USDT ? usdt : usdc;
         (, bytes memory data) = tokenAddress.staticcall(
             abi.encodeWithSignature(
                 "allowance(address,address)",
@@ -140,14 +141,14 @@ contract Presale is
                 purchaseUSD * 10 ** 12
             )
         );
-        require(success, "Presale: USDT payment is failed");
+        require(success, "Presale: Token payment is failed");
         update(
             purchaseUSD,
             purchaseData.tokenAmount,
             purchaseData.username,
             currentStep,
             1,
-            tokenType == TokenType.USDT ? DepositCurrency.USDT : DepositCurrency.USDC
+            tokenType
         );
         emit BuyToken(
             purchaseData.username,
@@ -158,7 +159,7 @@ contract Presale is
             stagePrice,
             purchaseData.tokenAmount,
             1,
-            DepositCurrency.USDT,
+            tokenType,
             block.timestamp
         );
         return true;
@@ -199,6 +200,41 @@ contract Presale is
             purchaseData.tokenAmount,
             coinPrice,
             DepositCurrency.COIN,
+            block.timestamp
+        );
+        return true;
+    }
+
+    function BuyWithCard(PurchaseData memory purchaseData) public onlyOwner returns(bool) {
+        (
+            uint256 currentStep,
+            uint256 stagePrice,
+            uint256 limiTokenAmount
+        ) = getCurrentStage();
+        require(
+            stagePurcharsedToken + purchaseData.tokenAmount <= limiTokenAmount,
+            "Presale: Wait next stage"
+        );
+        uint256 purchaseUSD = purchaseData.tokenAmount * stagePrice;
+        
+        update(
+            purchaseUSD,
+            purchaseData.tokenAmount,
+            purchaseData.username,
+            currentStep,
+            1,
+            DepositCurrency.COIN
+        );
+        emit BuyToken(
+            purchaseData.username,
+            _msgSender(),
+            purchaseData.username,
+            purchaseData.transactionId,
+            currentStep,
+            stagePrice,
+            purchaseData.tokenAmount,
+            1,
+            DepositCurrency.CARD,
             block.timestamp
         );
         return true;
@@ -287,6 +323,8 @@ contract Presale is
             stagedata,
             (uint256, uint256)
         );
+
+        require(currentStage != 0 && stagePrice != 0, "Presale: Stage didn't start");
 
         return (currentStage, stagePrice, limitTokenAmount);
     }

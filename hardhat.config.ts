@@ -22,6 +22,7 @@ const config: HardhatUserConfig = {
             runs: 999999,
           },
           evmVersion: 'istanbul',
+          viaIR: true,
         },
       },
     ],

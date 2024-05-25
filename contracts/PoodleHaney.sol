@@ -18,18 +18,27 @@ contract PoodleHaney is
     ERC20PermitUpgradeable,
     UUPSUpgradeable
 {
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    uint256 public teamPercent;
+    uint256 public revenuePercent;
+    uint256 public burnPercent;
+    address public teamWallet;
+    address public revenueWallet;
 
-    function initialize(address initialOwner) public initializer {
+    mapping(address => bool) public isBlacklisted;
+    mapping(address => bool) public isExecuteWallet;
+
+    function initialize(address initialOwner, address _teamWallet, address _revenueWallet) public initializer {
         __ERC20_init("PoodleHaney", "HANEY");
         __ERC20Burnable_init();
         __ERC20Pausable_init();
         __Ownable_init(initialOwner);
         __ERC20Permit_init("PoodleHaney");
         __UUPSUpgradeable_init();
+        teamWallet = _teamWallet;
+        revenueWallet = _revenueWallet;
+        teamPercent = 100;
+        revenuePercent = 200;
+        burnPercent = 100;
     }
 
     function pause() public onlyOwner {
@@ -40,8 +49,55 @@ contract PoodleHaney is
         _unpause();
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
+    function changeRevenueWallet(address newWallet) public onlyOwner {
+        require(revenueWallet != newWallet, "HANEY: Same wallet address");
+        revenueWallet = newWallet;
+    }
+
+    function changeTeamWallet(address newWallet) public onlyOwner {
+        require(teamWallet != newWallet, "HANEY: Same wallet address");
+        teamWallet = newWallet;
+    }
+
+    function addExecuteWallet(address wallet) external onlyOwner {
+        isExecuteWallet[wallet] = true;
+    }
+
+    function removeExecuteWallet(address wallet) external onlyOwner {
+        isExecuteWallet[wallet] = false;
+    }
+
+    function blacklistAddress(address account) external onlyOwner {
+        isBlacklisted[account] = true;
+    }
+
+    function removeBlacklist(address account) external onlyOwner {
+        isBlacklisted[account] = false;
+    }
+
+    function _transfer(address from, address to, uint256 value) internal override {
+        require(!isBlacklisted[from], "HANEY: Sender is blacklisted");
+        require(!isBlacklisted[to], "HANEY: Recipient is blacklisted");
+
+        if (isExecuteWallet[from]) {
+            super._transfer(from, to, value);
+            return;
+        }
+
+        uint256 teamFee = value * teamPercent / 10000;
+        uint256 revenueFee = value * revenuePercent /10000;
+        uint256 burnFee = value * burnPercent / 10000;
+        uint256 amountAfterFee = value - (teamFee + revenueFee + burnFee);
+        super._transfer(from, to, amountAfterFee);
+        if (teamFee > 0) {
+            super._transfer(from, teamWallet, teamFee);
+        }
+        if (revenueFee > 0) {
+            super._transfer(from, revenueWallet, revenueFee);
+        }
+        if (burnFee > 0) {
+            _burn(from, burnFee);
+        }
     }
 
     function _authorizeUpgrade(

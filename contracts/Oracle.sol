@@ -138,7 +138,10 @@ contract Oracle is
     }
 
     function calculatePrice() internal view returns(uint256, uint256) {
-        uint256 stageStep = block.timestamp <= stageStartTime ? 0 : (block.timestamp - stageStartTime) / stageStepDuration;
+        if(block.timestamp <= stageStartTime) {
+            return (0, stageStartTime);
+        }
+        uint256 stageStep = (block.timestamp - stageStartTime) / stageStepDuration;
         StageInfo memory currentStageInfo = stages[currentStage];
         StageInfo memory nextStage = stages[currentStage+1];
         uint256 stepPrice = currentStageInfo.price;

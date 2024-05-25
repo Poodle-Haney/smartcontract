@@ -1,10 +1,10 @@
 const { ethers, upgrades } = require('hardhat');
 
 // ** ETH
-// const UPGRADEABLE_PROXY = '0xEEe070f52279843B1C31F2C32B952C481ad84272';
+const UPGRADEABLE_PROXY = '0xD164AAC513782C9d78324eb2CA5Cf4c2fC3fd4A8';
 
 // ** BSC
-const UPGRADEABLE_PROXY = '0x2Cc5C7B030Cc7AC89510aDa7795EC18AB65dC8eD';
+// const UPGRADEABLE_PROXY = '0xAe8CfDeE5a5B9CdbD30332bAD97E1AC0d70a18b4';
 
 async function main() {
   //   const gas = await ethers.provider.getGasPrice();
