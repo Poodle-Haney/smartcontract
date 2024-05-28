@@ -19,7 +19,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 999999,
+            runs: 200,
           },
           evmVersion: 'istanbul',
           viaIR: true,

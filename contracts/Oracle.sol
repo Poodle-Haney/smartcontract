@@ -1,3 +1,14 @@
+/******************************************************************************************************/
+/*                                                                                                    */
+/*  ██████╗  ██████╗  ██████╗ ██████╗ ██╗     ███████╗    ██╗  ██╗ █████╗ ███╗   ██╗███████╗██╗   ██╗ */
+/*  ██╔══██╗██╔═══██╗██╔═══██╗██╔══██╗██║     ██╔════╝    ██║  ██║██╔══██╗████╗  ██║██╔════╝╚██╗ ██╔╝ */
+/*  ██████╔╝██║   ██║██║   ██║██║  ██║██║     █████╗      ███████║███████║██╔██╗ ██║█████╗   ╚████╔╝  */
+/*  ██╔═══╝ ██║   ██║██║   ██║██║  ██║██║     ██╔══╝      ██╔══██║██╔══██║██║╚██╗██║██╔══╝    ╚██╔╝   */
+/*  ██║     ╚██████╔╝╚██████╔╝██████╔╝███████╗███████╗    ██║  ██║██║  ██║██║ ╚████║███████╗   ██║    */
+/*  ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝╚══════╝    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝    */
+/*                                                                                                    */
+/******************************************************************************************************/
+
 //SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.24;
@@ -39,7 +50,7 @@ contract Oracle is
         CHANGE_STAGE_ROLE = keccak256("CHANGE_STAGE_ROLE");
         _grantRole(CHANGE_STAGE_ROLE, _msgSender());
         stageStepDuration = 30 minutes;
-        priceDecimal = 6;
+        priceDecimal = 7;
     }
 
     function addStages(
@@ -144,12 +155,7 @@ contract Oracle is
         uint256 stageStep = (block.timestamp - stageStartTime) / stageStepDuration;
         StageInfo memory currentStageInfo = stages[currentStage];
         StageInfo memory nextStage = stages[currentStage+1];
-        uint256 stepPrice = currentStageInfo.price;
-        if(nextStage.price - currentStageInfo.price == 20) {
-            stepPrice = currentStageInfo.price + 2 * stageStep >= nextStage.price ? nextStage.price - 2 : currentStageInfo.price + 2 * stageStep;
-        } else {
-            stepPrice = currentStageInfo.price + stageStep >= nextStage.price ? nextStage.price - 2 : currentStageInfo.price + stageStep;
-        }
+        uint256 stepPrice = currentStageInfo.price + stageStep >= nextStage.price ? nextStage.price - 1 : currentStageInfo.price + stageStep;
         uint256 endTime = stageStartTime + (stageStep + 1) * stageStepDuration;
         return (stepPrice, endTime);
     }
