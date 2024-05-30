@@ -10,7 +10,7 @@ async function main() {
     // ** Ether
     // [
     //   deployer.address,
-    //   '0xe1ec81Ae89D771d524eD1F2d0D757284A4387e1d',
+    //   '0xc806F89594Cd206e2a53f183718F1Ace0f8D5836',
     //   '0xd3715D6D6AD4De5Fcc7cb2B2F743833Ac76029c8',
     //   '0x9E57E1B5746dd68697953B93A5F318A7643107d6',
     //   '0x694AA1769357215DE4FAC081bf1f309aDC325306',
@@ -18,7 +18,7 @@ async function main() {
     // ** BSC
     [
       deployer.address,
-      '0x37dF6ffA4A3D776Ff7C67a4c89F0336abE081D90',
+      '0x0Fe58F912b2445dbB1A2f1320dc7697c41f1F480',
       '0xaABA81872131797BD2b7743A56Dc926C4d79B245',
       '0x3ac049c6E91a2c1b3A94431135F48e28F712F146',
       '0x2514895c72f50D8bd4B4F9b1110F0D6bD2c97526',

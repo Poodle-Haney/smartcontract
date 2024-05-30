@@ -76,8 +76,8 @@ contract Oracle is
         emit AddStage(step, stageInfo);
     }
 
-    function startStage(uint256 startTime) public onlyOwner returns(uint256) {
-        require(currentStage == 0, "Oracle: Alrady started stage");
+    function startStage(uint256 startTime) public onlyOwner returns (uint256) {
+        // require(currentStage == 0, "Oracle: Alrady started stage");
         currentStage = 1;
         stageStartTime = startTime;
         return stageStartTime;
@@ -105,7 +105,7 @@ contract Oracle is
         emit StartStage(step, startTime);
     }
 
-    function updateStageDuration(uint256 duration) public returns(bool) {
+    function updateStageDuration(uint256 duration) public returns (bool) {
         require(
             hasRole(CHANGE_STAGE_ROLE, _msgSender()),
             "Oracle: Must be CHANGE_STAGE_ROLE role"
@@ -129,7 +129,17 @@ contract Oracle is
         limitTokenAmount = stage.limitTokenAmount;
     }
 
-    function getCurrentStageInfo() public view returns(uint256 stageStep, uint256 price, uint256 limitTokenAmount, uint256 minDealUSD, uint256 endTime) {
+    function getCurrentStageInfo()
+        public
+        view
+        returns (
+            uint256 stageStep,
+            uint256 price,
+            uint256 limitTokenAmount,
+            uint256 minDealUSD,
+            uint256 endTime
+        )
+    {
         stageStep = currentStage;
         StageInfo memory info = stages[currentStage];
         (price, endTime) = calculatePrice();
@@ -148,14 +158,18 @@ contract Oracle is
         return price;
     }
 
-    function calculatePrice() internal view returns(uint256, uint256) {
-        if(block.timestamp <= stageStartTime) {
+    function calculatePrice() internal view returns (uint256, uint256) {
+        if (block.timestamp <= stageStartTime || stageStartTime == 0) {
             return (0, stageStartTime);
         }
-        uint256 stageStep = (block.timestamp - stageStartTime) / stageStepDuration;
+        uint256 stageStep = (block.timestamp - stageStartTime) /
+            stageStepDuration;
         StageInfo memory currentStageInfo = stages[currentStage];
-        StageInfo memory nextStage = stages[currentStage+1];
-        uint256 stepPrice = currentStageInfo.price + stageStep >= nextStage.price ? nextStage.price - 1 : currentStageInfo.price + stageStep;
+        StageInfo memory nextStage = stages[currentStage + 1];
+        uint256 stepPrice = currentStageInfo.price + stageStep >=
+            nextStage.price
+            ? nextStage.price - 1
+            : currentStageInfo.price + stageStep;
         uint256 endTime = stageStartTime + (stageStep + 1) * stageStepDuration;
         return (stepPrice, endTime);
     }

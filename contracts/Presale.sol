@@ -64,7 +64,6 @@ contract Presale is
     mapping(uint256 => uint256) stageStepTokens;
 
     event BuyToken(
-        string indexed username,
         address indexed depositAddress,
         string usernameStr,
         string transactionId,
@@ -76,9 +75,20 @@ contract Presale is
         uint256 timestamp
     );
     event UpdateOracle(address prevOracle, address newOracle);
-    event UpdateTokenAddress(TokenType tokenType, address prevTokenAddress, address newTokenAddress);
-    event UpdateWithdrawAddress(address prevWithdrawAddress, address newWithdrawAddress);
-    event ResetStage(uint256 prevStepDealAmount, uint256 step, uint256 startTime);
+    event UpdateTokenAddress(
+        TokenType tokenType,
+        address prevTokenAddress,
+        address newTokenAddress
+    );
+    event UpdateWithdrawAddress(
+        address prevWithdrawAddress,
+        address newWithdrawAddress
+    );
+    event ResetStage(
+        uint256 prevStepDealAmount,
+        uint256 step,
+        uint256 startTime
+    );
     event Withdraw(address tokenAddress, uint256 amount, address to);
 
     function initialize(
@@ -161,7 +171,6 @@ contract Presale is
             tokenType
         );
         emit BuyToken(
-            purchaseData.username,
             _msgSender(),
             purchaseData.username,
             purchaseData.transactionId,
@@ -201,7 +210,6 @@ contract Presale is
             DepositCurrency.COIN
         );
         emit BuyToken(
-            purchaseData.username,
             _msgSender(),
             purchaseData.username,
             purchaseData.transactionId,
@@ -215,7 +223,9 @@ contract Presale is
         return true;
     }
 
-    function BuyWithCard(PurchaseData memory purchaseData) public onlyOwner returns(bool) {
+    function BuyWithCard(
+        PurchaseData memory purchaseData
+    ) public onlyOwner returns (bool) {
         (
             uint256 currentStep,
             uint256 stagePrice,
@@ -226,7 +236,7 @@ contract Presale is
             "Presale: Wait next stage"
         );
         uint256 purchaseUSD = purchaseData.tokenAmount * stagePrice;
-        
+
         update(
             purchaseUSD,
             purchaseData.tokenAmount,
@@ -236,7 +246,6 @@ contract Presale is
             DepositCurrency.COIN
         );
         emit BuyToken(
-            purchaseData.username,
             _msgSender(),
             purchaseData.username,
             purchaseData.transactionId,
@@ -250,7 +259,7 @@ contract Presale is
         return true;
     }
 
-    function updateOracle(address newOracle) public onlyOwner returns(bool) {
+    function updateOracle(address newOracle) public onlyOwner returns (bool) {
         require(oracle != newOracle, "Presale: Same address");
         address prevOracle = oracle;
         oracle = newOracle;
@@ -258,10 +267,16 @@ contract Presale is
         return true;
     }
 
-    function updateTokenAddress(TokenType tokenType, address newAddress) public onlyOwner returns(bool) {
-        require(usdt != newAddress && usdc != newAddress, "Presale: Same address");
+    function updateTokenAddress(
+        TokenType tokenType,
+        address newAddress
+    ) public onlyOwner returns (bool) {
+        require(
+            usdt != newAddress && usdc != newAddress,
+            "Presale: Same address"
+        );
         address prevAddress = tokenType == TokenType.USDT ? usdt : usdc;
-        if(tokenType == TokenType.USDT) {
+        if (tokenType == TokenType.USDT) {
             usdt = newAddress;
         } else {
             usdc = newAddress;
@@ -271,7 +286,9 @@ contract Presale is
         return true;
     }
 
-    function updateWithdrawAddress(address newAddress) public onlyOwner returns(bool) {
+    function updateWithdrawAddress(
+        address newAddress
+    ) public onlyOwner returns (bool) {
         require(withdrawAddress != newAddress, "Presale: Same address");
         address prevWithdrawAddress = withdrawAddress;
         withdrawAddress = newAddress;
@@ -279,7 +296,10 @@ contract Presale is
         return true;
     }
 
-    function resetStage(uint256 step, uint256 startTime) public onlyOwner returns(bool) {
+    function resetStage(
+        uint256 step,
+        uint256 startTime
+    ) public onlyOwner returns (bool) {
         (bool success, ) = oracle.call(
             abi.encodeWithSignature(
                 "updateStage(uint256,uint256)",
@@ -288,7 +308,7 @@ contract Presale is
             )
         );
         require(success, "Presale: Reset is failed");
-        stageStepTokens[step-1] = stagePurcharsedToken;
+        stageStepTokens[step - 1] = stagePurcharsedToken;
         uint256 prevStageDealAmount = stagePurcharsedToken;
         stagePurcharsedToken = 0;
 
@@ -308,20 +328,26 @@ contract Presale is
             )
         );
         require(success, "Presale: Withdraw is failed");
-        
+
         emit Withdraw(tokenAddress, tokenAmount, withdrawAddress);
         return true;
     }
 
     function withdrawEth() public onlyOwner returns (bool) {
-        (bool success, ) = withdrawAddress.call{value: address(this).balance}("");
+        (bool success, ) = withdrawAddress.call{value: address(this).balance}(
+            ""
+        );
         require(success, "Presale: Withdraw is failed");
 
         emit Withdraw(address(0), address(this).balance, withdrawAddress);
         return true;
     }
 
-    function getCurrentStage() internal view returns (uint256, uint256, uint256) {
+    function getCurrentStage()
+        internal
+        view
+        returns (uint256, uint256, uint256)
+    {
         (, bytes memory stepdata) = oracle.staticcall(
             abi.encodeWithSignature("getCurrentStage()")
         );
@@ -334,7 +360,10 @@ contract Presale is
             (uint256, uint256)
         );
 
-        require(currentStage != 0 && stagePrice != 0, "Presale: Stage didn't start");
+        require(
+            currentStage != 0 && stagePrice != 0,
+            "Presale: Stage didn't start"
+        );
 
         return (currentStage, stagePrice, limitTokenAmount);
     }
