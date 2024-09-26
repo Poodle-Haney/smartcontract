@@ -77,7 +77,7 @@ contract Oracle is
     }
 
     function startStage(uint256 startTime) public onlyOwner returns (uint256) {
-        // require(currentStage == 0, "Oracle: Alrady started stage");
+        require(currentStage == 0, "Oracle: Alrady started stage");
         currentStage = 1;
         stageStartTime = startTime;
         return stageStartTime;

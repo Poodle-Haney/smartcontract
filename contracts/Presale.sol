@@ -153,12 +153,13 @@ contract Presale is
             purchaseUSD <= allowance,
             "Presale: Make sure to add enough allowance"
         );
+        uint256 tokenDecimal = getTokenDecimal(tokenType);
         (bool success, ) = tokenAddress.call(
             abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)",
                 _msgSender(),
                 withdrawAddress,
-                purchaseUSD * 10 ** 12
+                (purchaseUSD * 10 ** tokenDecimal) / (10 ** 7)
             )
         );
         require(success, "Presale: Token payment is failed");
@@ -368,6 +369,17 @@ contract Presale is
         return (currentStage, stagePrice, limitTokenAmount);
     }
 
+    function getTokenDecimal(
+        DepositCurrency tokenType
+    ) internal view returns (uint256) {
+        address tokenAddress = tokenType == DepositCurrency.USDT ? usdt : usdc;
+        (, bytes memory data) = tokenAddress.staticcall(
+            abi.encodeWithSignature("decimals()")
+        );
+        uint256 decimal = abi.decode(data, (uint256));
+        return decimal;
+    }
+
     function buyEthAmount(
         uint256 usdAmount
     ) internal view returns (uint256, uint256) {
@@ -375,7 +387,7 @@ contract Presale is
             abi.encodeWithSignature("getCoinPrice(address)", oraclePriceFeed)
         );
         uint256 coinPrice = abi.decode(data, (uint256));
-        return ((usdAmount * 10 ** 2 * 10 ** 18) / coinPrice, coinPrice);
+        return ((usdAmount * 10 ** 1 * 10 ** 18) / coinPrice, coinPrice);
     }
 
     function update(

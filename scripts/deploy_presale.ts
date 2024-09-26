@@ -10,23 +10,24 @@ async function main() {
     // ** Ether
     // [
     //   deployer.address,
-    //   '0xc806F89594Cd206e2a53f183718F1Ace0f8D5836',
-    //   '0xd3715D6D6AD4De5Fcc7cb2B2F743833Ac76029c8',
-    //   '0x9E57E1B5746dd68697953B93A5F318A7643107d6',
-    //   '0x694AA1769357215DE4FAC081bf1f309aDC325306',
+    //   '0x19d121268c5B3d5547aA3Ff33bC8372A1DAb5748',
+    //   '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    //   '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    //   '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
     // ],
     // ** BSC
     [
       deployer.address,
-      '0x0Fe58F912b2445dbB1A2f1320dc7697c41f1F480',
-      '0xaABA81872131797BD2b7743A56Dc926C4d79B245',
-      '0x3ac049c6E91a2c1b3A94431135F48e28F712F146',
-      '0x2514895c72f50D8bd4B4F9b1110F0D6bD2c97526',
+      '0xe8Da9c271Ef73aD0D04EbAfBE7EfA8D90b25c1B1',
+      '0x55d398326f99059fF775485246999027B3197955',
+      '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+      '0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE',
     ],
     { initializer: 'initialize', kind: 'uups' }
   );
 
   await contract.waitForDeployment();
+
   console.log('Oracle deployed to:', contract.target);
 }
 

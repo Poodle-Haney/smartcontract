@@ -9,6 +9,7 @@ async function main() {
   });
 
   await contract.waitForDeployment();
+
   console.log('Oracle deployed to:', contract.target);
 }
 

@@ -120,7 +120,12 @@ contract PoodleHaney is
         __ERC20Permit_init("PoodleHaney");
         __UUPSUpgradeable_init();
 
-        updateUniswapV2Router(_uniswapV2Router);
+        uniswapV2Router = IUniswapV2Router02(_uniswapV2Router);
+        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
+                address(this),
+                uniswapV2Router.WETH()
+            );
+        automatedMarketMakerPairs[uniswapV2Pair] = true;
         teamWallet = _teamWallet;
         revenueWallet = _revenueWallet;
         teamPercent = 100;
@@ -143,17 +148,8 @@ contract PoodleHaney is
         _unpause();
     }
 
-    function enableTrading() external onlyOwner {
+    function enableSwapFee() external onlyOwner {
         swapEnabled = true;
-    }
-
-    function updateUniswapV2Router(address newAddress) public onlyOwner {
-        emit UpdateUniswapV2Router(newAddress, address(uniswapV2Router));
-        uniswapV2Router = IUniswapV2Router02(newAddress);
-        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
-                address(this),
-                uniswapV2Router.WETH()
-            );
     }
 
     function changeFeeType(FeeType _type) external onlyOwner {
@@ -162,29 +158,30 @@ contract PoodleHaney is
     }
 
     function changeRevenueWallet(address newWallet) external onlyOwner {
-        require(revenueWallet != newWallet, "Same wallet address");
+        require(revenueWallet != newWallet, "HANEY: Same wallet address");
         emit ChangeFeeWallet(revenueWallet, newWallet, "revenueWallet");
         revenueWallet = newWallet;
     }
 
     function changeTeamWallet(address newWallet) external onlyOwner {
-        require(teamWallet != newWallet, "Same wallet address");
+        require(teamWallet != newWallet, "HANEY: Same wallet address");
         emit ChangeFeeWallet(teamWallet, newWallet, "teamWallet");
         teamWallet = newWallet;
     }
 
     function setExcludeWallet(address wallet, bool value) external onlyOwner {
+        require(isExecuteWallet[wallet] != value, "HANEY: Same value");
         isExecuteWallet[wallet] = value;
         emit ExcludeWallet(wallet, value);
     }
 
     function blacklistAddress(address account) external onlyOwner {
-        require(!isBlacklisted[account], "Already blacklisted");
+        require(!isBlacklisted[account], "HANEY: Already blacklisted");
         isBlacklisted[account] = true;
     }
 
     function removeBlacklist(address account) external onlyOwner {
-        require(isBlacklisted[account], "Not blacklisted");
+        require(isBlacklisted[account], "HANEY: Not blacklisted");
         isBlacklisted[account] = false;
     }
 
@@ -198,7 +195,7 @@ contract PoodleHaney is
         liquidityPercent = _liquidityPercent;
         require(
             _revenuePercent + _teamPercent + _liquidityPercent <= 400,
-            "Total fee must not exceed 400"
+            "HANEY: Total fee must not exceed 400"
         );
     }
 
@@ -210,9 +207,13 @@ contract PoodleHaney is
         address from,
         address to,
         uint256 value
-    ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
-        require(!isBlacklisted[from], "Sender is blacklisted");
-        require(!isBlacklisted[to], "Recipient is blacklisted");
+    )
+        internal
+        override(ERC20Upgradeable, ERC20PausableUpgradeable)
+        whenNotPaused
+    {
+        require(!isBlacklisted[from], "HANEY: Sender is blacklisted");
+        require(!isBlacklisted[to], "HANEY: Recipient is blacklisted");
 
         if (
             isExecuteWallet[from] ||
